@@ -29,3 +29,4 @@ listen
 ```
 - I can build step by step to get in end full stack web app.
 - My app can handler any error from server or client and the show user about error to solve that and try again
+- Connect My app with Movie API and get data from it, then i am retrive the in best way to send it to frontend. 
