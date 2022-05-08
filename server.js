@@ -5,16 +5,24 @@ const app = express();
 const axios = require("axios").default;
 
 const { json } = require("express/lib/response");
+app.use(express.json());
 
 const cors = require("cors");
 app.use(cors());
 
-require('dotenv').config();
-const apiKey = process.env.API_KEY;
+var bodyParser = require('body-parser');
+app.use(bodyParser.urlencoded({extended: false}));
 
 const movieData = require("./Movie Data/data.json");
-const port = 3000;
 
+require('dotenv').config();
+const apiKey = process.env.API_KEY;
+const apiKey2 = "a70154502a88b5d3146c6d6a216a09ea";
+const port = 3000;
+const databaseURL = "postgres://omarsawalmeh:omarynwa10@localhost:5432/movies";
+
+const { Client } = require('pg');
+const client = new Client(databaseURL);
 
 // get .....
 app.get("/", handleServer);
@@ -22,6 +30,11 @@ app.get("/favorite", handleFavorite);
 app.get("/error", (req, res)=>res.send(error()));
 app.get("/trending", handleTrend);
 app.get("/search", handleSearch);
+// TASK 13 ----->
+//dbs:
+app.post("/addMovie", handleAddMovies);
+app.get("/getMovies", handleGetMovies);
+
 
 
 // --> functions
@@ -63,7 +76,7 @@ app.use(function(error, req, res, next) {
 
 // Function For Task 12.....
 function handleTrend(req, res){
-    let url = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey}&language=en-US`;
+    let url = `https://api.themoviedb.org/3/trending/all/week?api_key=${apiKey2}&language=en-US`;
     axios.get(url)
          .then(result =>{
              let moviesData = result.data.results;
@@ -80,7 +93,7 @@ function handleTrend(req, res){
 
 function handleSearch(req, res){
     let movieName = req.query.name;
-    let url = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey}&language=en-US&query=${movieName}&page=2`;
+    let url = `https://api.themoviedb.org/3/search/movie?api_key=${apiKey2}&language=en-US&query=${movieName}&page=2`;
     axios.get(url)
          .then(result =>{
              let movie = result.data.results;
@@ -95,19 +108,52 @@ function handleSearch(req, res){
          })
 }
 
+// TASK 13 ----->
+//dbs:
 
-app.listen(port, function(){
-    console.log(`Server on port ${port}`);
+function handleAddMovies(req ,res){
+    const name = req.body.name;
+    const myComments = req.body.myComments;
+
+    let sql = `INSERT INTO favMovies (name, myComments) VALUES ($1, $2) RETURNING *`;
+    let values = [name, myComments];
+
+    client.query(sql, values)
+          .then(result=>{
+              console.log(result.rows);
+              res.status(201).json(result.rows[0]);
+          })
+          .catch(error=>{
+              console.log(error);
+          });
+}
+
+function handleGetMovies(req, res){
+    let sql = `SELECT * FROM favMovies`;
+    client.query(sql)
+          .then(result=>{
+            console.log(result.rows);
+            res.status(201).json(result.rows);
+          })
+          .catch(error=>{
+              console.log(error);
+          });
+}
+
+client.connect().then(() => {
+    app.listen(port, function(){
+        console.log(`Server on port ${port}`);
+    });
 })
 
-// Constructor  ...
+// Constructors  ...
 function Movie(title, path, overview){
     this.title = title;
     this.path = path;
     this.overview = overview;
 }
 
-// Constructor  For Trend Movie ...
+// Constructor  For Trend Movies ...
 function Trend(id, title, releaseDate, posterPath, overview){
     this.id = id;
     this.title = title;
@@ -116,6 +162,7 @@ function Trend(id, title, releaseDate, posterPath, overview){
     this.overview = overview;
 }
 
+// Constructor  For Search Movies ..
 function Search(id, title, overview, popularity, vote_average, vote_count){
     this.id = id;
     this.title = title;
