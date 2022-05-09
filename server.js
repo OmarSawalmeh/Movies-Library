@@ -30,11 +30,13 @@ app.get("/favorite", handleFavorite);
 app.get("/error", (req, res)=>res.send(error()));
 app.get("/trending", handleTrend);
 app.get("/search", handleSearch);
-// TASK 13 ----->
-//dbs:
-app.post("/addMovie", handleAddMovies);
-app.get("/getMovies", handleGetMovies);
-
+// TASK 13 & TASK 14 ----->
+//CRUD:
+app.post("/addMovie", handleAddMovies);               // Create
+app.get("/getMovies", handleGetMovies);               // Read
+app.put("/UPDATE/:movieName", handleUpdate);          // Update   ---> // UPDATE with params
+app.delete("/DELETE/:movieName", handleDelete);       // Delete   ---> // DELETE with params
+app.get("/getMovie/:movieName", handleGetMovieByName); 
 
 
 // --> functions
@@ -108,9 +110,9 @@ function handleSearch(req, res){
          })
 }
 
+
 // TASK 13 ----->
 //dbs:
-
 function handleAddMovies(req ,res){
     const name = req.body.name;
     const myComments = req.body.myComments;
@@ -138,6 +140,53 @@ function handleGetMovies(req, res){
           .catch(error=>{
               console.log(error);
           });
+}
+
+// TASK 14 ----->
+//dbs:
+function handleUpdate(req, res){
+    const movieName = req.params.movieName;
+    const {name, myComments} = req.body;
+
+    let sql = `UPDATE favMovies SET name = $1, myComments = $2 WHERE name = $3 RETURNING *;`
+    let values = [name, myComments, movieName];
+
+    client.query(sql, values)
+          .then(result=>{
+              res.json(result.rows[0]);
+          })
+          .catch(error=>{
+            console.log(error);
+        });
+}
+
+function handleDelete(req, res){
+    const movieName = req.params.movieName;
+    let sql = `DELETE FROM favMovies WHERE name = $1;`
+    let values = [movieName];
+
+    client.query(sql, values)
+          .then(result=>{
+              res.json(result.rows[0]);
+          })
+          .catch(error=>{
+            console.log(error);
+        });
+}
+
+function handleGetMovieByName(req, res){
+    const movieName = req.params.movieName;
+    let sql = `SELECT * FROM favMovies WHERE name = $1`;
+    let values = [movieName];
+
+    client.query(sql, values)
+    .then(result=>{
+        console.log(result.rows);
+        res.status(201).json(result.rows);
+    })
+    .catch(error=>{
+      console.log(error);
+    });
 }
 
 client.connect().then(() => {
@@ -171,3 +220,4 @@ function Search(id, title, overview, popularity, vote_average, vote_count){
     this.vote_average = vote_average;
     this.vote_count = vote_count;
 }
+
